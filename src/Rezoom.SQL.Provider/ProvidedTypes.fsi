@@ -8,22 +8,6 @@
 //
 // This code has been modified and is appropriate for use in conjunction with the F# 3.0-4.0 releases
 
-#if INTERNAL_FSHARP_TYPEPROVIDERS_SDK_TESTS
-
-namespace ProviderImplementation.ProvidedTypes.AssemblyReader
-
-open System
-open System.Collections.ObjectModel
-
-[<AutoOpen>]
-module internal Reader =
-
-    type ILModuleReader = class end
-
-    val GetWeakReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * WeakReference<ILModuleReader>>
-    val GetStrongReaderCache : unit -> System.Collections.Concurrent.ConcurrentDictionary<(string * string), DateTime * int * ILModuleReader>
-
-#endif
 
 namespace ProviderImplementation.ProvidedTypes
 
@@ -112,7 +96,7 @@ namespace ProviderImplementation.ProvidedTypes
         inherit MethodInfo
 
         /// When making a cross-targeting type provider, use this method instead of the ProvidedMethod constructor from ProvidedTypes
-        new: methodName: string * parameters: ProvidedParameter list * returnType: Type * ?invokeCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedMethod
+        new: methodName: string * parameters: ProvidedParameter list * returnType: Type * invokeCode: (Expr list -> Expr) * ?isStatic: bool -> ProvidedMethod
 
         /// Add XML documentation information to this provided method
         member AddObsoleteAttribute: message: string * ?isError: bool -> unit
@@ -142,7 +126,7 @@ namespace ProviderImplementation.ProvidedTypes
         member DefineStaticParameters: parameters: ProvidedStaticParameter list * instantiationFunction: (string -> obj[] -> ProvidedMethod) -> unit
 
         /// This method is for internal use only in the type provider SDK
-        member internal GetInvokeCode: (Expr list -> Expr) option
+        member internal GetInvokeCode: Expr list -> Expr
 
 
     /// Represents an erased provided property.
@@ -227,9 +211,6 @@ namespace ProviderImplementation.ProvidedTypes
 
         member SetFieldAttributes: attributes: FieldAttributes -> unit
 
-        /// Add a custom attribute to the provided property definition.
-        member AddCustomAttribute: CustomAttributeData -> unit
-
         /// Create a new provided literal field. It is not initially associated with any specific provided type definition.
         static member Literal : fieldName: string * fieldType: Type * literalValue:obj -> ProvidedField
 
@@ -294,10 +275,10 @@ namespace ProviderImplementation.ProvidedTypes
         inherit TypeDelegator
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
+        new: className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool -> ProvidedTypeDefinition
 
         /// When making a cross-targeting type provider, use this method instead of the corresponding ProvidedTypeDefinition constructor from ProvidedTypes
-        new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool * ?isSealed: bool * ?isInterface: bool * ?isAbstract: bool -> ProvidedTypeDefinition
+        new: assembly: Assembly * namespaceName: string * className: string * baseType: Type option * ?hideObjectMethods: bool * ?nonNullable: bool * ?isErased: bool  -> ProvidedTypeDefinition
 
         /// Add the given type as an implemented interface.
         member AddInterfaceImplementation: interfaceType: Type -> unit
@@ -476,12 +457,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// <param name="assemblyReplacementMap">
         ///    Optionally specify a map of assembly names from source model to referenced assemblies.
         /// </param>
-        ///               
-        /// <param name="addDefaultProbingLocation">
-        ///    Optionally specify that the location of the type provider design-time component should be used to resolve failing assembly resolutions.
-        ///    This flag or an equivalent call to RegisterProbingFolder is generally needed for any type provider design-time components loaded into .NET Core tooling.
-        /// </param>
-        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list * ?addDefaultProbingLocation: bool -> TypeProviderForNamespaces
+        new: config: TypeProviderConfig * namespaceName:string * types: ProvidedTypeDefinition list * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// <summary>Initializes a type provider.</summary>
         /// <param name="sourceAssemblies">
@@ -493,12 +469,7 @@ namespace ProviderImplementation.ProvidedTypes
         /// <param name="assemblyReplacementMap">
         ///    Optionally specify a map of assembly names from source model to referenced assemblies.
         /// </param>
-        ///               
-        /// <param name="addDefaultProbingLocation">
-        ///    Optionally specify that the location of the type provider design-time component should be used to resolve failing assembly resolutions.
-        ///    This flag or an equivalent call to RegisterProbingFolder is generally needed for any type provider design-time components loaded into .NET Core tooling.
-        /// </param>
-        new: config: TypeProviderConfig * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list * ?addDefaultProbingLocation: bool -> TypeProviderForNamespaces
+        new: config: TypeProviderConfig * ?sourceAssemblies: Assembly list * ?assemblyReplacementMap: (string * string) list -> TypeProviderForNamespaces
 
         /// Invoked by the type provider to add a namespace of provided types in the specification of the type provider.
         member AddNamespace: namespaceName:string * types: ProvidedTypeDefinition list -> unit
@@ -558,15 +529,15 @@ namespace ProviderImplementation.ProvidedTypes
         static member PropertyGetUnchecked: pinfo:PropertyInfo * args:Expr list -> Expr
         static member PropertyGetUnchecked: obj:Expr * pinfo:PropertyInfo * ?args:Expr list -> Expr
         static member PropertySetUnchecked: pinfo:PropertyInfo * value:Expr * ?args:Expr list -> Expr
-        static member PropertySetUnchecked: obj:Expr * pinfo:PropertyInfo * value:Expr * ?args:Expr list -> Expr
+        static member PropertySetUnchecked: obj:Expr * pinfo:PropertyInfo * value:Expr * args:Expr list -> Expr
         static member FieldGetUnchecked: pinfo:FieldInfo -> Expr
         static member FieldGetUnchecked: obj:Expr * pinfo:FieldInfo -> Expr
         static member FieldSetUnchecked: pinfo:FieldInfo * value:Expr -> Expr
         static member FieldSetUnchecked: obj:Expr * pinfo:FieldInfo * value:Expr -> Expr
         static member TupleGetUnchecked: e:Expr * n:int -> Expr
         static member LetUnchecked: v:Var * e:Expr * body:Expr -> Expr
-        static member NewRecordUnchecked : ty:Type * args:Expr list -> Expr
 
       type Shape
       val ( |ShapeCombinationUnchecked|ShapeVarUnchecked|ShapeLambdaUnchecked| ): e:Expr -> Choice<(Shape * Expr list),Var, (Var * Expr)>
       val RebuildShapeCombinationUnchecked: Shape * args:Expr list -> Expr
+
