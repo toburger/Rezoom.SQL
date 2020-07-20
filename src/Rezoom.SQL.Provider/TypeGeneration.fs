@@ -324,6 +324,23 @@ let generateMigrationMembers
             | _ -> bug "Invalid migrate argument list")
         provided.AddMember meth
     do
+        let pars =
+            [   ProvidedParameter("config", typeof<MigrationConfig>)
+                ProvidedParameter("connectionStringSettings", typeof<Configuration.ConnectionStringSettings>)
+            ]
+        let meth = ProvidedMethod("Migrate", pars, typeof<unit>, isStatic = true, invokeCode = function
+            | [ config; connectionStringSettings ] -> 
+                let backend =
+                    <@ fun () ->
+                        (%backend.MigrationBackend)
+                            (%%connectionStringSettings)
+                    @>
+                <@@ let migrations : string MigrationTree array = %%Expr.PropertyGet(migrationProperty)
+                    migrations.Run(%%config, %%(upcast backend))
+                @@>
+            | _ -> bug "Invalid migrate argument list")
+        provided.AddMember meth
+    do
         let connectionName = Quotations.Expr.Value(config.ConnectionName)
         let pars =
             [   ProvidedParameter("config", typeof<MigrationConfig>)
